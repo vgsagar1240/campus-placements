@@ -1,0 +1,20 @@
+{
+  "node_modules\\next\\dist\\client\\index.js -> ../pages/_app": {
+    "id": "node_modules\\next\\dist\\client\\index.js -> ../pages/_app",
+    "files": [
+      "static/chunks/_pages-dir-browser_node_modules_next_dist_pages__app_js.js"
+    ]
+  },
+  "node_modules\\next\\dist\\client\\index.js -> ../pages/_error": {
+    "id": "node_modules\\next\\dist\\client\\index.js -> ../pages/_error",
+    "files": [
+      "static/chunks/_pages-dir-browser_node_modules_next_dist_pages__error_js.js"
+    ]
+  },
+  "src\\widgets\\MonitorPanel.tsx -> react-qr-code": {
+    "id": "src\\widgets\\MonitorPanel.tsx -> react-qr-code",
+    "files": [
+      "static/chunks/_pages-dir-browser_node_modules_react-qr-code_lib_index_js.js"
+    ]
+  }
+}

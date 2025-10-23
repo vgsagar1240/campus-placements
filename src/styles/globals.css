@@ -1,0 +1,35 @@
+/* Global styles for Campus Placements Dashboard */
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f7f7f7;
+    color: #222;
+}
+
+/* Improve default focus ring for accessibility */
+* :focus-visible {
+    outline: 2px solid #2f6fed;
+    outline-offset: 2px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-weight: 600;
+    margin: 0.2rem 0;
+}
+
+button {
+    font-family: inherit;
+    cursor: pointer;
+}
+
+/* Make the landing/auth page center within provided Container spacing */
+main>.MuiContainer-root>div:first-child {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}

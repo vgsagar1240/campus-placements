@@ -144,7 +144,7 @@ const theme = createTheme({
 
 
 // Component to handle inactivity warning dialog
-function AppWithInactivityWarning({ Component, pageProps }: AppProps) {
+function AppWithInactivityWarning({ Component, pageProps, router }: AppProps) {
   const { 
     showInactivityWarning, 
     inactivityTimeRemaining, 
@@ -206,12 +206,12 @@ function AppWithInactivityWarning({ Component, pageProps }: AppProps) {
   );
 }
 
-export default function App({ Component, pageProps }: AppProps) {
+export default function App({ Component, pageProps, router }: AppProps) {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
-        <AppWithInactivityWarning Component={Component} pageProps={pageProps} />
+        <AppWithInactivityWarning Component={Component} pageProps={pageProps} router={router} />
       </AuthProvider>
     </ThemeProvider>
   );

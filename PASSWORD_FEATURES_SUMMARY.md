@@ -66,6 +66,7 @@ I have successfully implemented comprehensive password management features for t
 ### **Key Features:**
 
 #### **Password Visibility Toggle**
+{% raw %}
 ```typescript
 // Password field with visibility toggle
 <TextField
@@ -81,8 +82,10 @@ I have successfully implemented comprehensive password management features for t
   }}
 />
 ```
+{% endraw %}
 
 #### **Forgot Password Flow**
+{% raw %}
 ```typescript
 const handleForgotPassword = async () => {
   // Validate email domain
@@ -96,8 +99,10 @@ const handleForgotPassword = async () => {
   setSnackbar({ message: 'Password reset email sent!', severity: 'success' });
 };
 ```
+{% endraw %}
 
 #### **Password Change Security**
+{% raw %}
 ```typescript
 const handlePasswordChange = async () => {
   // Re-authenticate user
@@ -108,6 +113,7 @@ const handlePasswordChange = async () => {
   await updatePassword(user, newPassword);
 };
 ```
+{% endraw %}
 
 ## 🎨 **UI/UX Features:**
 

@@ -43,6 +43,7 @@ console.log('Re-authentication successful, updating password...');
 
 ### 5. **Development Debug Panel**
 Added a debug information panel (only visible in development) to help identify issues:
+{% raw %}
 ```typescript
 {process.env.NODE_ENV === 'development' && (
   <Alert severity="info" sx={{ borderRadius: 2 }}>
@@ -59,6 +60,7 @@ Added a debug information panel (only visible in development) to help identify i
   </Alert>
 )}
 ```
+{% endraw %}
 
 ## 🔍 **Error Handling Flow:**
 

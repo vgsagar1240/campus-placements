@@ -2,74 +2,223 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Users: each user can read/write their own profile, employees can read all users
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      allow read: if request.auth != null && 
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isEmployee() {
+      return isAuthenticated() && 
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employee';
     }
-
-    // Settings collection - allow public read, authenticated users can write (for invite codes)
-    match /settings/{document} {
-      allow read: if true; // Public read access for invite codes
-      allow write: if request.auth != null;
+    
+    function isStudent() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'student';
+    }
+    
+    function isValidUser() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+    
+    function hasValidRole() {
+      return isEmployee() || isStudent();
     }
 
-    // Drives collection - allow all reads, authenticated users can write
-    match /drives/{driveId} {
-      allow read: if true;
-      allow write: if request.auth != null;
+    // Users collection - User profiles and authentication data
+    match /users/{userId} {
+      // Users can read/write their own profile
+      allow read, write: if isOwner(userId);
+      
+      // Employees can read all user profiles
+      allow read: if isEmployee();
+      
+      // Validate user data on creation/update
+      allow create: if isAuthenticated() && 
+        request.auth.uid == userId &&
+        request.resource.data.keys().hasAll(['email', 'role', 'createdAt']) &&
+        request.resource.data.role in ['student', 'employee'] &&
+        request.resource.data.email is string &&
+        request.resource.data.createdAt is timestamp;
+      
+      allow update: if isOwner(userId) &&
+        request.resource.data.role == resource.data.role; // Prevent role changes
+    }
 
-      // Resources subcollection
-      match /resources/{resId} {
-        allow read: if true;
-        allow write: if request.auth != null;
+    // Notices collection - Public announcements
+    match /notices/{noticeId} {
+      // Everyone can read notices (public announcements)
+      allow read: if true;
+      
+      // Only employees can create/update/delete notices
+      allow create: if isEmployee() &&
+        request.resource.data.keys().hasAll(['title', 'body', 'createdAt', 'createdAtTs']) &&
+        request.resource.data.title is string &&
+        request.resource.data.body is string &&
+        request.resource.data.createdAt is string &&
+        request.resource.data.createdAtTs is timestamp;
+      
+      allow update, delete: if isEmployee();
+    }
+
+    // Drives collection - Job placement drives
+    match /drives/{driveId} {
+      // Everyone can read drives (public job postings)
+      allow read: if true;
+      
+      // Only employees can create/update/delete drives
+      allow create: if isEmployee() &&
+        request.resource.data.keys().hasAll(['title', 'description', 'company', 'createdAt', 'updatedAt']) &&
+        request.resource.data.title is string &&
+        request.resource.data.description is string &&
+        request.resource.data.company is string &&
+        request.resource.data.createdAt is timestamp &&
+        request.resource.data.updatedAt is timestamp;
+      
+      allow update, delete: if isEmployee();
+      
+      // Drive resources subcollection
+      match /resources/{resourceId} {
+        allow read: if true; // Public read for drive resources
+        allow write: if isEmployee();
       }
     }
 
-    // Notices collection - allow all reads, authenticated users can write
-    match /notices/{noticeId} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-
-    // Drive Applications - allow authenticated users to manage
+    // Drive Applications - Student applications to drives
     match /driveApplications/{appId} {
-      allow read, write: if request.auth != null;
+      // Students can read their own applications
+      allow read: if isStudent() && 
+        resource.data.studentId == request.auth.uid;
+      
+      // Employees can read all applications
+      allow read: if isEmployee();
+      
+      // Students can create applications for themselves
+      allow create: if isStudent() &&
+        request.resource.data.studentId == request.auth.uid &&
+        request.resource.data.keys().hasAll(['driveId', 'studentId', 'status', 'appliedAt']) &&
+        request.resource.data.status == 'applied' &&
+        request.resource.data.appliedAt is timestamp;
+      
+      // Only employees can update application status
+      allow update: if isEmployee() &&
+        request.resource.data.studentId == resource.data.studentId; // Prevent student ID changes
     }
-    
-    // Registrations collection - allow authenticated users to manage
+
+    // Registrations collection - Student registrations for drives
     match /registrations/{regId} {
-      allow read, write: if request.auth != null;
+      // Students can read their own registrations
+      allow read: if isStudent() && 
+        resource.data.studentId == request.auth.uid;
+      
+      // Employees can read all registrations
+      allow read: if isEmployee();
+      
+      // Students can create registrations for themselves
+      allow create: if isStudent() &&
+        request.resource.data.studentId == request.auth.uid &&
+        request.resource.data.keys().hasAll(['driveId', 'studentId', 'status', 'appliedAt']) &&
+        request.resource.data.status == 'applied' &&
+        request.resource.data.appliedAt is string;
+      
+      // Only employees can update registration status
+      allow update: if isEmployee() &&
+        request.resource.data.studentId == resource.data.studentId;
     }
 
-    // Resume storage - users can manage their own resumes, employees can read all
+    // Resume storage - User resume files
     match /resumes/{userId}/{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      allow read: if request.auth != null && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employee';
+      // Users can read/write their own resumes
+      allow read, write: if isOwner(userId);
+      
+      // Employees can read all resumes
+      allow read: if isEmployee();
+      
+      // Validate resume data
+      allow create: if isOwner(userId) &&
+        request.resource.data.keys().hasAll(['fileName', 'downloadURL', 'uploadedAt']) &&
+        request.resource.data.fileName is string &&
+        request.resource.data.downloadURL is string &&
+        request.resource.data.uploadedAt is timestamp;
     }
 
-    // Allow all users to read resume URLs (for applications)
-    match /resumes/{allUsers}/{allPaths=**} {
-      allow read: if request.auth != null;
+    // Coding Profiles - User coding platform profiles
+    match /codingProfiles/{profileId} {
+      // Users can read/write their own coding profiles
+      allow read, write: if isOwner(profileId);
+      
+      // Employees can read all coding profiles
+      allow read: if isEmployee();
+      
+      // Validate coding profile data
+      allow create: if isOwner(profileId) &&
+        request.resource.data.keys().hasAll(['userId', 'platform', 'username', 'updatedAt']) &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.platform is string &&
+        request.resource.data.username is string &&
+        request.resource.data.updatedAt is timestamp;
     }
 
-    // Coding Profiles - users can manage their own profiles
-    match /codingProfiles/{document} {
-      allow read, write: if request.auth != null;
+    // Daily Question Statistics - Coding question analytics
+    match /dailyQuestionStats/{statId} {
+      // All authenticated users can read stats
+      allow read: if isValidUser();
+      
+      // Users can create/update their own stats
+      allow create, update: if isValidUser() &&
+        request.resource.data.userId == request.auth.uid;
+      
+      // Employees can read all stats
+      allow read: if isEmployee();
     }
 
-    // Daily Question Analytics
-    match /dailyQuestionStats/{document} {
-      allow read, write: if request.auth != null;
+    // User Activity Logs - System activity tracking
+    match /userActivity/{activityId} {
+      // Users can read their own activity logs
+      allow read: if isOwner(activityId);
+      
+      // Employees can read all activity logs
+      allow read: if isEmployee();
+      
+      // System can create activity logs
+      allow create: if isValidUser() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.keys().hasAll(['userId', 'action', 'timestamp']) &&
+        request.resource.data.action is string &&
+        request.resource.data.timestamp is timestamp;
     }
 
-    // User Activity Logs
-    match /userActivity/{document} {
-      allow read, write: if request.auth != null;
+    // Settings collection - System configuration
+    match /settings/{settingId} {
+      // Public read access for invite codes and public settings
+      allow read: if true;
+      
+      // Only employees can modify settings
+      allow write: if isEmployee();
+    }
+
+    // Admin collection - Administrative data
+    match /admin/{document=**} {
+      // Only employees can access admin data
+      allow read, write: if isEmployee();
+    }
+
+    // Analytics collection - System analytics
+    match /analytics/{document=**} {
+      // Only employees can access analytics
+      allow read, write: if isEmployee();
+    }
+
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
